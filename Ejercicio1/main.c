@@ -8,40 +8,57 @@
 
 int main() /// PADRE
 {
-    pid_t pid1;
-    pid_t pid2;
+    pid_t hijo1;
+    pid_t hijo2;
 
-    pid1 = fork(); /// Primer hijo
+    hijo1 = fork(); /// Primer hijo
 
-    if(pid1 == 0) { /// Descendencia Primer Hijo
-        pid_t pid3 = fork(); /// Primer nieto
-        pid_t pid4 = fork(); /// Segundo nieto
-        if((pid3 == 0) && (pid4 != 0)) { /// Descendencia Primer Nieto
-            pid_t pid5 = fork(); /// Primer bisnieto
-            pid_t pid6 = fork(); /// Segundo bisnieto
-        }
-        if((pid3 == 0) && (pid4 == 0)) { /// Descendencia Segundo Nieto
-            pid_t pid7 = fork(); /// Tercer bisnieto
-            pid_t pid8 = fork(); /// Cuarto bisnieto
-        }
-    } else {
-        pid2 = fork(); /// Segundo Hijo
-        if(pid2 == 0) { /// Descendencia Segundo Hijo
-            pid_t pid9 = fork(); /// Tercer Nieto
-            if(pid9 == 0) { /// Descendencia Tercer Nieto
-                pid_t pid10 = fork(); /// Quinto bisnieto
+    if(hijo1 == 0) { /// Descendencia Primer Hijo
+        pid_t nieto1 = fork(); /// Primer nieto
+        pid_t nieto2 = fork(); /// Segundo nieto
+        if((nieto1 == 0) && (nieto2 != 0)) { /// Descendencia Primer Nieto
+            pid_t bisnieto1 = fork(); /// Primer bisnieto
+            if(bisnieto1 != 0) {
+                printf ("PID:%d PPID:%d Parentezco-Tipo: Bisnieto 1 - Normal\n",bisnieto1,getpid());
+            }
+            pid_t bisnieto2 = fork(); /// Segundo bisnieto
+            if((bisnieto2 != 0) && (bisnieto1 != 0)) {
+                printf ("PID:%d PPID:%d Parentezco-Tipo: Bisnieto 2 - Normal\n",bisnieto2,getpid());
             }
         }
+        if((nieto1 == 0) && (nieto2 == 0)) { /// Descendencia Segundo Nieto
+            pid_t bisnieto3 = fork(); /// Tercer bisnieto
+            if(bisnieto3 != 0) {
+                printf ("PID:%d PPID:%d Parentezco-Tipo: Bisnieto 3 - Normal\n",bisnieto3,getpid());
+            }
+            pid_t bisnieto4 = fork(); /// Cuarto bisnieto
+            if(bisnieto4 != 0 && (bisnieto3 != 0)) {
+                printf ("PID:%d PPID:%d Parentezco-Tipo: Bisnieto 4 - Normal\n",bisnieto4,getpid());
+            }
+        }
+        if((nieto1 != 0) && (nieto2 != 0)) {
+            printf ("PID:%d PPID:%d Parentezco-Tipo: Nieto 1 - Normal\n",nieto1,getpid());
+            printf ("PID:%d PPID:%d Parentezco-Tipo: Nieto 2 - Normal\n",nieto2,getpid());
+        }
+    } else {
+        printf ("PID:%d PPID:%d Parentezco-Tipo: Hijo 1 - Normal\n",hijo1,getpid());
+        hijo2 = fork(); /// Segundo Hijo
+        if(hijo2 == 0) { /// Descendencia Segundo Hijo
+            pid_t nieto3 = fork(); /// Tercer Nieto
+            if(nieto3 == 0) { /// Descendencia Tercer Nieto
+                pid_t bisnieto5 = fork(); /// Quinto bisnieto
+                if(bisnieto5 != 0) {
+                    printf ("PID:%d PPID:%d Parentezco-Tipo: Bisnieto 5 - Normal\n",bisnieto5,getpid());
+                }
+            } else {
+                printf ("PID:%d PPID:%d Parentezco-Tipo: Nieto 3 - Normal\n",nieto3,getpid());
+            }
+        } else {
+            printf ("PID:%d PPID:%d Parentezco-Tipo: Hijo 2 - Normal\n",hijo2,getpid());
+            printf("\nPresione una tecla para terminar\n");
+            gets();
+        }
     }
-
-//    pid2 = fork(); /// Segundo hijo. Primer nieto
-
-//    if((pid1 == 0) && (pid2 != 0)) { /// Descendencia primer hijo
-//        pid_t pid3 = fork(); /// Segundo nieto
-//    }
-
-
-
 
     return 0;
 }
