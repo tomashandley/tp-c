@@ -69,7 +69,6 @@ int main()
         }
 
         /*Inicializa thread*/
-        //printf("Esperando clientes...\n");
         if (pthread_create(&thread, NULL, Servidor, &clienteSockfd) != 0)
         {
             printf("No se pudo crear el thread\n");
@@ -102,6 +101,8 @@ void cargarArchivo()
     	getline(archivoArticulos,art.articulo,';');
     	getline(archivoArticulos,art.producto,';');
     	getline(archivoArticulos,art.marca);
+        art.marca.replace(art.marca.length()-1,1,"\0");
+        //cout<<"-"<<art.marca<<"-"<<endl;
         articulos.push_back(art);
     }
     archivoArticulos.close();
@@ -141,50 +142,94 @@ void* Servidor(void* arg)
 {
     int sockEntrada = *(int *) arg;
     char buffer_cliente[256],cad[256];
+    string consulta;
+
     strcpy(cad,"Bienvenida/o ingrese la consulta en el formato CAMPO VALOR o QUIT para salir:");
     write(sockEntrada,cad,sizeof(cad));
 
-    //leo consulta campo valor
+    //leo consulta en formato campo valor
     read(sockEntrada, buffer_cliente, sizeof (buffer_cliente));
-    cout<<"consulta: "<<buffer_cliente<<endl<<endl;
+    consulta = buffer_cliente;
+    for_each(consulta.begin(),consulta.end(),[](char &c){
+        c = ::toupper(c);
+    });
+    cout<<"cliente: "<<sockEntrada<<" consulta: "<<consulta<<endl<<endl;
     
-    while(strcmp(buffer_cliente,"QUIT") != 0){
+    while(consulta != "QUIT"){
         articulo pedido = {};
-        string campo,valor,buffer(buffer_cliente);
-    	stringstream ss(buffer);
+        string campo,valor,respuesta;
+    	stringstream ss(consulta),respuestaStream;
         getline(ss,campo,' ');
-        std::for_each(campo.begin(),campo.end(),[](char &c){
-            c = ::tolower(c);
-        });
         getline(ss,valor);
 
-        if(campo == "id"){
+        if(campo == "ID"){
             pedido.id = atoi(valor.c_str());
         }
-        else if(campo == "articulo"){
+        else if(campo == "ARTICULO"){
             pedido.articulo = valor;
         }
-        else if(campo == "producto"){
+        else if(campo == "PRODUCTO"){
             pedido.producto = valor;
         }
-        else if(campo == "marca"){
+        else if(campo == "MARCA"){
             pedido.marca = valor;
         }
-        cout<<"id: "<<pedido.id<<endl
-            <<"articulo: "<<pedido.articulo<<endl
-            <<"marca: "<<pedido.marca<<endl
-            <<"producto: "<<pedido.producto<<endl<<endl;
+        cout<<"id: -"<<pedido.id<<"-"<<endl
+            <<"articulo: -"<<pedido.articulo<<"-"<<endl
+            <<"marca: -"<<pedido.marca<<"-"<<endl
+            <<"producto: -"<<pedido.producto<<"-"<<endl<<endl;
+
+        list<articulo>::iterator it;
+        int cant = 0;
+        cout<<articulos.size()<<" articulos"<<endl;
+        for (it = articulos.begin(); it != articulos.end(); it++)
+        {
+            if(pedido.id == it->id ||
+                pedido.articulo == it->articulo ||
+                pedido.producto == it->producto ||
+                pedido.marca == it->marca){
+                    cant++;
+            }
+        }
+        
+        cout<<endl<<cant<<" articulos coinciden con la consulta"<<endl;
+        sprintf (cad, "%d",cant);
+	    write(sockEntrada,cad,sizeof(cad));
+
+        if(cant > 0){
+            respuestaStream << "Los articulos con " << campo << " igual a " << valor << " son:" << endl
+                            << "ID\t\tARTICULO\t\tPRODUCTO\tMARCA";
+            strcpy(cad,respuestaStream.str().c_str());
+            write(sockEntrada,cad,sizeof(cad));
+
+            for (it = articulos.begin(); it != articulos.end(); it++)
+            {
+                if(pedido.id == it->id ||
+                    pedido.articulo == it->articulo ||
+                    pedido.producto == it->producto ||
+                    pedido.marca == it->marca){
+                        sprintf (cad, "%d \t %s \t %s \t %s",it->id,
+                                it->articulo.c_str(),it->producto.c_str(),
+                                it->marca.c_str());
+                            write(sockEntrada,cad,sizeof(cad));
+                }
+            }
+        }
 
         strcpy(cad,"Ingrese la consulta en el formato CAMPO VALOR o QUIT para salir:");
         write(sockEntrada,cad,sizeof(cad));
 
-        //leo opcion elegida
+        //leo consulta en formato campo valor
         read(sockEntrada, buffer_cliente, sizeof (buffer_cliente));
-        cout<<"consulta: "<<buffer_cliente<<endl;
+        consulta = buffer_cliente;
+        for_each(consulta.begin(),consulta.end(),[](char &c){
+            c = ::toupper(c);
+        });
+        cout<<"cliente: "<<sockEntrada<<" consulta: "<<consulta<<endl<<endl;
     }
     
     CONECTADOS--;
-    printf("\nSE HA DESCONECTADO UN CLIENTE, HAY %d CONECTADOS\n",CONECTADOS);
+    cout<<endl<<"SE HA DESCONECTADO UN CLIENTE, HAY "<<CONECTADOS<<" CONECTADOS"<<endl;
 
     close(sockEntrada);
 

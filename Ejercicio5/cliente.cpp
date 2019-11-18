@@ -11,6 +11,7 @@
 #include <unistd.h>
 #include <iostream>
 #include <string>
+#include <algorithm>
 
 using namespace std;
 
@@ -23,7 +24,7 @@ int main(int argc, char **argvs)
 {
     system("clear");
 
-	printf("conectando a %s\n",argvs[1]);
+	cout<<"conectando a "<<argvs[1]<<endl;
 
     struct sockaddr_in serv_addr;
 
@@ -45,7 +46,7 @@ int configuracionCliente(char *servidor)
     clienteSockfd = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (clienteSockfd < 0)
     {
-        printf("Error en Socket\n");
+        cout<<"Error en Socket"<<endl;
         exit(1);
     }
     bzero((char *) & serv_addr, sizeof (serv_addr));
@@ -59,7 +60,7 @@ int configuracionCliente(char *servidor)
 
     if(connect(clienteSockfd,(struct sockaddr *)&serv_addr, addrlen) < 0)
     {
-        printf("Error en Socket\n");
+        cout<<"Error en Socket"<<endl;
         exit(1);
     }
     return clienteSockfd;
@@ -67,25 +68,43 @@ int configuracionCliente(char *servidor)
 
 void Cliente(int clienteSockfd)
 {
-    char buffer_para_servidor[256],cad[256];
-    string buffer;
+    char cad[256];
+    string buffer_para_servidor;
 
     read(clienteSockfd, cad, sizeof (cad));//bienvenido
-    printf("%s\n",cad);
+    cout<<cad<<endl;
 
-    //scanf("%s", buffer_para_servidor);
-    getline(cin,buffer);
-    cout<<buffer<<endl;
-    write(clienteSockfd, buffer.c_str(), sizeof (buffer));
+    getline(cin,buffer_para_servidor);
+    for_each(buffer_para_servidor.begin(),buffer_para_servidor.end(),[](char &c){
+        c = ::toupper(c);
+    });
+    write(clienteSockfd, buffer_para_servidor.c_str(), sizeof (buffer_para_servidor));
 
-    while(strcmp(buffer_para_servidor,"QUIT") != 0){
+    while(buffer_para_servidor != "QUIT"){
+        read(clienteSockfd, cad, sizeof (cad));
+        int cant = atoi(cad);
+        
+        if(cant > 0){
+            cout<<endl<<cant<<" articulos coinciden con la consulta"<<endl;
+            read(clienteSockfd, cad, sizeof (cad));
+            cout<<cad<<endl;
+            for(int i=0;i<cant;i++){
+                read(clienteSockfd, cad, sizeof (cad));
+                cout<<cad<<endl;
+            }
+        }
+        else{
+            cout<<"No hay articulos que coincidan con la consulta."<<endl;
+        }
 
         read(clienteSockfd, cad, sizeof (cad));//bienvenido
-        printf("%s\n",cad);
+        cout<<endl<<cad<<endl;
 
-        getline(cin,buffer);
-        cout<<buffer<<endl;
-        write(clienteSockfd, buffer.c_str(), sizeof (buffer));
+        getline(cin,buffer_para_servidor);
+        for_each(buffer_para_servidor.begin(),buffer_para_servidor.end(),[](char &c){
+            c = ::toupper(c);
+        });
+        write(clienteSockfd, buffer_para_servidor.c_str(), sizeof (buffer_para_servidor));
     }
     close(clienteSockfd);
 }
