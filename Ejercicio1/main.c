@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <signal.h>
 #include <unistd.h>
 #include <stdlib.h>
@@ -20,10 +21,25 @@ int main() /// PADRE
             pid_t bisnieto1 = fork(); /// Primer bisnieto
             if(bisnieto1 != 0) {
                 printf ("PID:%d PPID:%d Parentezco-Tipo: Bisnieto 1 - Normal\n",bisnieto1,getpid());
+            } else { ///Estoy en el bisnieto 1
+                /* Creo el primer zombie */
+                pid_t zombie1 = fork();
+                if(zombie1 != 0) {
+                    printf ("PID:%d PPID:%d Parentezco-Tipo: Tataranieto 1 - Zombie\n",zombie1,getpid());
+                    sleep(50);
+                }
             }
             pid_t bisnieto2 = fork(); /// Segundo bisnieto
             if((bisnieto2 != 0) && (bisnieto1 != 0)) {
                 printf ("PID:%d PPID:%d Parentezco-Tipo: Bisnieto 2 - Normal\n",bisnieto2,getpid());
+            } else { /// Estoy en el segundo bisnieto
+                if((bisnieto2 == 0) && (bisnieto1 == 0)) { /// Creo el segundo zombie
+                    pid_t zombie2 = fork();
+                    if(zombie2 != 0) {
+                        printf ("PID:%d PPID:%d Parentezco-Tipo: Tataranieto 2 - Zombie\n",zombie2,getpid());
+                        sleep(50);
+                    }
+                }
             }
         }
         if((nieto1 == 0) && (nieto2 == 0)) { /// Descendencia Segundo Nieto
