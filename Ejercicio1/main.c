@@ -7,6 +7,20 @@
 #include <sys/resource.h>
 #include <sys/time.h>
 
+int contar()
+{
+    int cont;
+    while(1)
+    {
+        sleep(2);
+        cont = 0;
+        for(int i=0; i<1000000 ; i++)
+            cont++;
+    }
+
+    return 0;
+}
+
 int main() /// PADRE
 {
     pid_t hijo1;
@@ -46,10 +60,26 @@ int main() /// PADRE
             pid_t bisnieto3 = fork(); /// Tercer bisnieto
             if(bisnieto3 != 0) {
                 printf ("PID:%d PPID:%d Parentezco-Tipo: Bisnieto 3 - Normal\n",bisnieto3,getpid());
+            } else {
+                pid_t demonio1 = fork();
+                if(demonio1 == 0) {
+                    contar();
+                } else {
+                    printf ("PID:%d PPID:%d Parentezco-Tipo: Tataranieto 3 - Demonio\n",demonio1,getpid());
+                    return 0;
+                }
             }
             pid_t bisnieto4 = fork(); /// Cuarto bisnieto
             if(bisnieto4 != 0 && (bisnieto3 != 0)) {
                 printf ("PID:%d PPID:%d Parentezco-Tipo: Bisnieto 4 - Normal\n",bisnieto4,getpid());
+            } else {
+                pid_t demonio2 = fork();
+                if(demonio2 == 0) {
+                    contar();
+                } else {
+                    printf ("PID:%d PPID:%d Parentezco-Tipo: Tataranieto 4 - Demonio\n",demonio2,getpid());
+                    return 0;
+                }
             }
         }
         if((nieto1 != 0) && (nieto2 != 0)) {
@@ -65,6 +95,14 @@ int main() /// PADRE
                 pid_t bisnieto5 = fork(); /// Quinto bisnieto
                 if(bisnieto5 != 0) {
                     printf ("PID:%d PPID:%d Parentezco-Tipo: Bisnieto 5 - Normal\n",bisnieto5,getpid());
+                } else {
+                    pid_t demonio3 = fork();
+                    if(demonio3 == 0) {
+                        contar();
+                    } else {
+                        printf ("PID:%d PPID:%d Parentezco-Tipo: Tataranieto 5 - Demonio\n",demonio3,getpid());
+                        return 0;
+                    }
                 }
             } else {
                 printf ("PID:%d PPID:%d Parentezco-Tipo: Nieto 3 - Normal\n",nieto3,getpid());
