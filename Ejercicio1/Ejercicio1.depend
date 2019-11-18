@@ -1,0 +1,10 @@
+# depslib dependency file v1.0
+1573966285 source:/home/thandley/Desktop/tp-c/Ejercicio1/main.c
+	<stdio.h>
+	<signal.h>
+	<unistd.h>
+	<stdlib.h>
+	<sys/wait.h>
+	<sys/resource.h>
+	<sys/time.h>
+
