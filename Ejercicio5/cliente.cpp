@@ -15,7 +15,6 @@
 
 using namespace std;
 
-// #define PORT 5000
 int PORT;
 
 int configuracionCliente(char *servidor);
@@ -25,10 +24,6 @@ void ayuda(string s);
 int main(int argc, char **argvs)
 {
     system("clear");
-    cout<<argc<<endl;
-    int i;
-    for(i=0;i<argc;i++)
-        cout<<argvs[i]<<endl;
     if(argc != 3){
         ayuda("-h");
         return 0;
@@ -42,9 +37,9 @@ int main(int argc, char **argvs)
 
     int clienteSockfd;
     clienteSockfd = configuracionCliente(argvs[1]);
-    /*llama funcion del cliente pasando descriptor*/	
+    
     Cliente(clienteSockfd);
-    exit(0);
+    return 0;
 }
 
 int configuracionCliente(char *servidor)
@@ -66,7 +61,6 @@ int configuracionCliente(char *servidor)
 		strcpy(servidor,"127.0.0.1");
     serv_addr.sin_addr.s_addr = inet_addr(servidor);
     serv_addr.sin_port = htons(PORT);
-
 
     if(connect(clienteSockfd,(struct sockaddr *)&serv_addr, addrlen) < 0)
     {
@@ -122,5 +116,10 @@ void ayuda(string s)
 {
     if(s == "-h" || s == "-help" || s == "-?")
         cout<<"Debe ingresar la IP y el PUERTO del servidor al que se desea conectar."<<endl
-            <<"Ejemplo: ./cliente 127.0.0.1 5000"<<endl;
+            <<"Ejemplo: ./cliente 127.0.0.1 5000"<<endl<<endl
+            <<"Una vez conectado al servidor, este le pedira que ingrese la consulta en el formato CAMPO VALOR."<<endl
+            <<"Ejemplo: id 16008"<<endl
+            <<"Ejemplo: articulo PALMITO MAROLIO RODAJA 800 gr"<<endl
+            <<"Ejemplo: producto cafe"<<endl
+            <<"Ejemplo: marca natura"<<endl<<endl;
 }

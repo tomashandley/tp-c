@@ -20,10 +20,7 @@
 
 using namespace std;
 
-// #define PORT 5000
 #define MAX 10
-
-int CONECTADOS = 0;
 
 struct articulo{
     int id;
@@ -31,14 +28,16 @@ struct articulo{
     string producto;
     string marca;
 };
-list<articulo> articulos{};
 
+list<articulo> articulos{};
+int CONECTADOS = 0;
 int PORT;
 
 void cargarArchivo();
 int configuracionServidor();
 void* Servidor(void* arg);
 void ayuda(string s);
+static void createDaemonProcess();
 
 int main(int argc, char **argvs)
 {
@@ -46,13 +45,14 @@ int main(int argc, char **argvs)
         ayuda("-h");
         return 0;
     }
+    createDaemonProcess();
     PORT = atoi(argvs[1]);
 
     cargarArchivo();
 
     int sockfd = configuracionServidor();
 
-	printf("Esperando clientes\n");
+	//printf("Esperando clientes\n");
 	while (1)
 	{
 
@@ -67,19 +67,19 @@ int main(int argc, char **argvs)
 
         if ((clienteSockfd = accept(sockfd, (struct sockaddr *) & clienteAddr, &clntLen)) < 0)
         {
-            printf("Error en Socket\n");
+      //      printf("Error en Socket\n");
             exit(1);
         }
 
         /*Inicializa thread*/
         if (pthread_create(&thread, NULL, Servidor, &clienteSockfd) != 0)
         {
-            printf("No se pudo crear el thread\n");
+        //    printf("No se pudo crear el thread\n");
             exit(1);
         }
-        printf("\nNUEVO CLIENTE CONECTADO\n");
+        //printf("\nNUEVO CLIENTE CONECTADO\n");
         CONECTADOS++;
-        printf("%d clientes conectados\n",CONECTADOS);
+        //printf("%d clientes conectados\n",CONECTADOS);
         pthread_detach(thread);
 
     }
@@ -91,7 +91,7 @@ void cargarArchivo()
     ifstream archivoArticulos;
     archivoArticulos.open("articulos.txt");
     if (archivoArticulos.fail()) {
-        cerr << "Error al abrir el archivo" << endl;
+        //cerr << "Error al abrir el archivo" << endl;
         archivoArticulos.close();
         exit(1);
     }
@@ -105,21 +105,18 @@ void cargarArchivo()
     	getline(archivoArticulos,art.articulo,';');
     	getline(archivoArticulos,art.producto,';');
     	getline(archivoArticulos,art.marca,'\r');
-        // art.marca.replace(art.marca.length()-1,1,"\0");
-        //cout<<"-"<<art.marca<<"-"<<endl;
         articulos.push_back(art);
     }
     archivoArticulos.close();
-    cout << articulos.size() << endl;
 }
 int configuracionServidor()
 {
-     int sockfd;
+    int sockfd;
     struct sockaddr_in serverAddr;
 
     if ((sockfd = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
     {
-      printf("Error en el Socket\n");
+    //  printf("Error en el Socket\n");
       exit(1);
     }
 
@@ -130,13 +127,13 @@ int configuracionServidor()
 
     if (bind(sockfd, (struct sockaddr *) & serverAddr, sizeof (serverAddr)) < 0)
     {
-      printf("Error en Socket\n");
+    //  printf("Error en Socket\n");
       exit(1);
-     }
+    }
 
     if (listen(sockfd, MAX) < 0)
     {
-      printf("Error en Socket\n");
+    //  printf("Error en Socket\n");
       exit(1);
     }
 
@@ -157,7 +154,7 @@ void* Servidor(void* arg)
     for_each(consulta.begin(),consulta.end(),[](char &c){
         c = ::toupper(c);
     });
-    cout<<"cliente: "<<sockEntrada<<" consulta: "<<consulta<<endl<<endl;
+    //cout<<"cliente: "<<sockEntrada<<" consulta: "<<consulta<<endl<<endl;
     
     while(consulta != "QUIT"){
         articulo pedido = {};
@@ -177,15 +174,10 @@ void* Servidor(void* arg)
         }
         else if(campo == "MARCA"){
             pedido.marca = valor;
-        }
-        cout<<"id: -"<<pedido.id<<"-"<<endl
-            <<"articulo: -"<<pedido.articulo<<"-"<<endl
-            <<"marca: -"<<pedido.marca<<"-"<<endl
-            <<"producto: -"<<pedido.producto<<"-"<<endl<<endl;
+        }        
 
         list<articulo>::iterator it;
         int cant = 0;
-        cout<<articulos.size()<<" articulos"<<endl;
         for (it = articulos.begin(); it != articulos.end(); it++)
         {
             if(pedido.id == it->id ||
@@ -196,7 +188,7 @@ void* Servidor(void* arg)
             }
         }
         
-        cout<<endl<<cant<<" articulos coinciden con la consulta"<<endl;
+        //cout<<endl<<cant<<" articulos coinciden con la consulta"<<endl;
         sprintf (cad, "%d",cant);
 	    write(sockEntrada,cad,sizeof(cad));
 
@@ -229,11 +221,11 @@ void* Servidor(void* arg)
         for_each(consulta.begin(),consulta.end(),[](char &c){
             c = ::toupper(c);
         });
-        cout<<"cliente: "<<sockEntrada<<" consulta: "<<consulta<<endl<<endl;
+        //cout<<"cliente: "<<sockEntrada<<" consulta: "<<consulta<<endl<<endl;
     }
     
     CONECTADOS--;
-    cout<<endl<<"SE HA DESCONECTADO UN CLIENTE, HAY "<<CONECTADOS<<" CONECTADOS"<<endl;
+    //cout<<endl<<"SE HA DESCONECTADO UN CLIENTE, HAY "<<CONECTADOS<<" CONECTADOS"<<endl;
 
     close(sockEntrada);
 
@@ -244,4 +236,31 @@ void ayuda(string s)
     if(s == "-h" || s == "-help" || s == "-?")
         cout<<"Debe ingresar el PUERTO que escuchara el servidor."<<endl
             <<"Ejemplo: ./servidor 5000"<<endl;
+}
+static void createDaemonProcess()
+{
+    pid_t pid, sid;
+    printf("parent pid: %d\n", getpid());
+    pid = fork(); // fork a new child process
+    if(pid != 0)
+        printf("fork pid proceso demonio: %d\n", pid);
+    if (pid < 0)
+    {
+        printf("fork failed!\n");
+        exit(1);
+    }
+    if (pid > 0) // its the parent process
+    {
+        exit(0); //terminate the parent process succesfully
+    }
+    
+
+    umask(0);       //unmasking the file mode
+    sid = setsid(); //set new session
+    if (sid < 0)
+    {
+        exit(1);
+    }
+    //close(STDIN_FILENO);
+    //close(STDERR_FILENO);
 }
