@@ -16,6 +16,7 @@ sem_t *semHayRespuesta;
 sem_t *semHayConsulta;
 
 sem_t* abrirSemaforo(const char* nombre);
+void ayuda(string s);
 
 int main(int argc, char* argv[]) 
 { 
@@ -24,20 +25,21 @@ int main(int argc, char* argv[])
     abrirSemaforo("/hayrespuesta");
     abrirSemaforo("/hayconsulta");
 
-    cout<<argc<<endl;
-    int i;
-    for(i=0;i<argc;i++)
-        cout<<argv[i]<<endl;
+    if(argc != 3){
+        ayuda("-h");
+        return 0;
+    }
+    
     stringstream consultaStream;
     consultaStream<<argv[1]<<" "<<argv[2];
     cout<<consultaStream.str()<<endl;
     // return 0;
 
     /* the size (in bytes) of shared memory object */
-    const int SIZE = 4096000; 
+    const int SIZE = 4096000;
   
     /* name of the shared memory object */
-    const char* name = "OS"; 
+    const char* name = "mem"; 
   
     /* shared memory file descriptor */
     int shm_fd; 
@@ -50,23 +52,21 @@ int main(int argc, char* argv[])
   
     ftruncate(shm_fd, SIZE);
     /* memory map the shared memory object */
-    ptr = mmap(0, SIZE, PROT_WRITE | PROT_READ, MAP_SHARED, shm_fd, 0); 
-  
+    ptr = mmap(NULL, SIZE, PROT_WRITE | PROT_READ, MAP_SHARED, shm_fd, 0); 
+    
     sem_wait(semEsperandoRtaMutex);
     sem_wait(semUsoMemoriaMutex);
     // escribo consulta
     sprintf((char *)ptr, "%s", consultaStream.str().c_str());
-
     sem_post(semUsoMemoriaMutex);
     sem_post(semHayConsulta);
-    // sem_wait(semHayRespuesta);
-    // sem_wait(semUsoMemoriaMutex);
-    // // leo respuesta
-    // sem_post(semUsoMemoriaMutex);
-    // sem_post(semEsperandoRtaMutex);
-    /* read from the shared memory object */
-    // printf("%s", (char*)ptr); 
-  
+    sem_wait(semHayRespuesta);
+    sem_wait(semUsoMemoriaMutex);
+    // leo respuesta
+    printf("%s", (char*)ptr);
+    sem_post(semUsoMemoriaMutex);
+    sem_post(semEsperandoRtaMutex);
+    
     /* remove the shared memory object */
     shm_unlink(name); 
     return 0; 
@@ -75,4 +75,13 @@ int main(int argc, char* argv[])
 sem_t* abrirSemaforo(const char* nombre)
 {
     return sem_open(nombre,0);
+}
+void ayuda(string s)
+{
+    if(s == "-h" || s == "-help" || s == "-?")
+        cout<<"Debe la consulta en el formato CAMPO VALOR."<<endl
+            <<"Ejemplo: ./cliente id 16008"<<endl
+            <<"Ejemplo: ./cliente articulo PALMITO MAROLIO RODAJA 800 gr"<<endl
+            <<"Ejemplo: ./cliente producto cafe"<<endl
+            <<"Ejemplo: ./cliente marca natura"<<endl<<endl;
 }
