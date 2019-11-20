@@ -6,9 +6,12 @@
 #include <sstream>
 #include <sys/mman.h>
 #include <sys/stat.h>
-#include <sys/fcntl.h>
+#include <fcntl.h>
 #include <unistd.h>
 #include <string.h>
+#include <semaphore.h>
+#include <algorithm>
+#include <csignal>
 
 using namespace std;
 
@@ -20,36 +23,109 @@ struct articulo{
 };
 list<articulo> articulos{};
 
-struct art{
-    list<articulo> articulos{};
-};
+sem_t *semUsoMemoriaMutex;
+sem_t *semEsperandoRtaMutex;
+sem_t *semHayRespuesta;
+sem_t *semHayConsulta;
+int SIZE = 4096000;
+string NOMBRE = "mem";
 
 void cargarArchivo();
-//semaforo usoMemoriaMutex, esperandoRespuestaMutex, hayRespuestaMutex
-void* crearMemoria(const char* nombre, size_t size);
-int main()
-{
-    cout<<"servidor"<<endl;
+sem_t* crearSemaforo(const char* nombre, int valor);
+void handler(int);
+static void createDaemonProcess();
+void ayuda();
+
+int main(int argc, char* argv[]) 
+{ 
+    if(argc > 1 || argv[1] == "-h" || argv[1] == "-help" || argv[1] == "-?"){
+        ayuda();
+        return 0;
+    }
+    createDaemonProcess();
+
+    signal(SIGINT, handler);
+
+    semUsoMemoriaMutex = crearSemaforo("/usomemoria",1);
+    semEsperandoRtaMutex = crearSemaforo("/esperandorespuesta",1);
+    semHayRespuesta = crearSemaforo("/hayrespuesta",0);
+    semHayConsulta = crearSemaforo("/hayconsulta",0);
 
     cargarArchivo();
-    cout<<articulos.back().id<<" "<<articulos.back().articulo<<" "<<articulos.back().producto<<" "<<articulos.back().marca<<endl;
 
-    int fd = shm_open("miMemoria",O_CREAT|O_RDWR,0600);
-    //ar = (list<articulo> *)crearMemoria("/mem",sizeof(list<articulo>));
-    ftruncate(fd,sizeof(articulo)*(articulos.size()));
-    // ftruncate(fd,sizeof(int)*6);
-
-//    list<int> numeros{1,2,3,4,5,6};
-//    cout<<numeros.size()<<endl;
-//    list<int> *lista;
-//    lista = (list<int> *)mmap(NULL,sizeof(int)*6,PROT_READ|PROT_WRITE,MAP_SHARED,fd,0);
-//    memcpy(lista,&numeros,(sizeof(int)*6)+1);
-    list<articulo> *lista;
-    lista = (list<articulo> *)mmap(NULL,sizeof(articulo)*articulos.size(),PROT_READ|PROT_WRITE,MAP_SHARED,fd,0);
-    memcpy(lista,&articulos,(sizeof(articulo)*articulos.size()));
+    /* shared memory file descriptor */
+    int shm_fd; 
+  
+    /* pointer to shared memory obect */
+    void* ptr; 
+  
+    /* create the shared memory object */
+    shm_fd = shm_open(NOMBRE.c_str(), O_CREAT | O_RDWR, 0666); 
+  
+    /* configure the size of the shared memory object */
+    ftruncate(shm_fd, SIZE); 
+  
+    /* memory map the shared memory object */
+    ptr = mmap(NULL, SIZE, PROT_WRITE | PROT_READ, MAP_SHARED, shm_fd, 0); 
     
-    munmap(lista,(sizeof(articulo)*articulos.size()));
-    close(fd);
+    while(1){
+
+	    sem_wait(semHayConsulta);
+	    sem_wait(semUsoMemoriaMutex);
+        // leo consulta   
+        string consulta = string((char*)ptr);
+        for_each(consulta.begin(),consulta.end(),[](char &c){
+            c = ::toupper(c);
+        });
+        articulo pedido = {};
+        string campo,valor,respuesta;
+    	stringstream ss(consulta),respuestaStream;
+        getline(ss,campo,' ');
+        getline(ss,valor);
+        if(campo == "ID"){
+            pedido.id = atoi(valor.c_str());
+        }
+        else if(campo == "ARTICULO"){
+            pedido.articulo = valor;
+        }
+        else if(campo == "PRODUCTO"){
+            pedido.producto = valor;
+        }
+        else if(campo == "MARCA"){
+            pedido.marca = valor;
+        } 
+
+        sem_post(semUsoMemoriaMutex);
+        // proceso consulta
+        list<articulo>::iterator it;
+        for (it = articulos.begin(); it != articulos.end(); it++)
+        {
+            if(pedido.id == it->id ||
+                pedido.articulo == it->articulo ||
+                pedido.producto == it->producto ||
+                pedido.marca == it->marca){
+                    respuestaStream << it->id << " \t " << it->articulo << " \t " << it->producto << "\t" << it->marca <<endl;
+                }
+        }
+        sem_wait(semUsoMemoriaMutex);
+        // escribo respuesta
+        sprintf((char *)ptr, "%s", respuestaStream.str().c_str());
+        sem_post(semUsoMemoriaMutex);
+        sem_post(semHayRespuesta);
+    }
+    
+    /*
+    stringstream respuestaStream;
+    // respuestaStream << a.id << " \t " << a.marca << " \t " << a.producto << "\t" << a.articulo <<endl;
+    list<articulo>::iterator it;
+    for (it = articulos.begin(); it != articulos.end(); it++)
+    {
+        respuestaStream << it->id << " \t " << it->marca << " \t " << it->producto << "\t" << it->articulo <<endl;
+    }
+    // sprintf((char *)ptr, "%s", message_0); 
+    sprintf((char *)ptr, "%s", respuestaStream.str().c_str());
+    */
+    return 0;
 }
 
 void cargarArchivo()
@@ -70,16 +146,57 @@ void cargarArchivo()
     	art.id = atoi(id.c_str());
     	getline(archivoArticulos,art.articulo,';');
     	getline(archivoArticulos,art.producto,';');
-    	getline(archivoArticulos,art.marca);
+    	getline(archivoArticulos,art.marca,'\r');
         articulos.push_back(art);
     }
     archivoArticulos.close();
-    cout << articulos.size() << endl;
+    //cout << articulos.size() << endl;
 }
-void* crearMemoria(const char* nombre, size_t size)
+sem_t* crearSemaforo(const char* nombre, int valor)
 {
-    int fd = shm_open(nombre, O_CREAT|O_RDWR, S_IRUSR|S_IWUSR);
-    ftruncate(fd, size);
-    void *dir = mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
-    return dir;
+    return sem_open(nombre, O_CREAT, S_IRUSR | S_IWUSR, valor);
+}
+void handler(int sig)
+{
+	sem_close(semEsperandoRtaMutex);
+	sem_unlink("/esperandorespuesta");
+    sem_close(semHayConsulta);
+    sem_unlink("/hayconsulta");
+    sem_close(semHayRespuesta);
+    sem_unlink("/hayrespuesta");
+    sem_close(semUsoMemoriaMutex);
+    sem_unlink("/usomemoria");
+	shm_unlink(NOMBRE.c_str());
+}
+static void createDaemonProcess()
+{
+    pid_t pid, sid;
+    printf("parent pid: %d\n", getpid());
+    pid = fork(); // fork a new child process
+    if(pid != 0)
+        printf("fork pid proceso demonio: %d\n", pid);
+    if (pid < 0)
+    {
+        printf("fork failed!\n");
+        exit(1);
+    }
+    if (pid > 0) // its the parent process
+    {
+        exit(0); //terminate the parent process succesfully
+    }
+    
+
+    umask(0);       //unmasking the file mode
+    sid = setsid(); //set new session
+    if (sid < 0)
+    {
+        exit(1);
+    }
+    //close(STDIN_FILENO);
+    //close(STDERR_FILENO);
+}
+void ayuda()
+{
+    cout<<"Este proceso crea el demonio y devuelve su pid."<<endl
+        <<"Para finalizarlo ejecute: kill -2 pid"<<endl<<endl;
 }
