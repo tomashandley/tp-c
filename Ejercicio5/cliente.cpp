@@ -15,17 +15,27 @@
 
 using namespace std;
 
-#define PORT 5000
+// #define PORT 5000
+int PORT;
 
 int configuracionCliente(char *servidor);
 void Cliente(int clienteSockfd);
+void ayuda(string s);
 
 int main(int argc, char **argvs)
 {
     system("clear");
+    cout<<argc<<endl;
+    int i;
+    for(i=0;i<argc;i++)
+        cout<<argvs[i]<<endl;
+    if(argc != 3){
+        ayuda("-h");
+        return 0;
+    }
 
-	cout<<"conectando a "<<argvs[1]<<endl;
-
+	cout<<"Conectando a "<<argvs[1]<<":"<<argvs[2]<<endl;
+    PORT = atoi(argvs[2]);
     struct sockaddr_in serv_addr;
 
     socklen_t addrlen = sizeof (serv_addr);
@@ -107,4 +117,10 @@ void Cliente(int clienteSockfd)
         write(clienteSockfd, buffer_para_servidor.c_str(), sizeof (buffer_para_servidor));
     }
     close(clienteSockfd);
+}
+void ayuda(string s)
+{
+    if(s == "-h" || s == "-help" || s == "-?")
+        cout<<"Debe ingresar la IP y el PUERTO del servidor al que se desea conectar."<<endl
+            <<"Ejemplo: ./cliente 127.0.0.1 5000"<<endl;
 }

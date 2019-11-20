@@ -20,7 +20,7 @@
 
 using namespace std;
 
-#define PORT 5000
+// #define PORT 5000
 #define MAX 10
 
 int CONECTADOS = 0;
@@ -33,17 +33,20 @@ struct articulo{
 };
 list<articulo> articulos{};
 
-struct art{
-    list<articulo> articulos{};
-};
+int PORT;
 
 void cargarArchivo();
 int configuracionServidor();
 void* Servidor(void* arg);
+void ayuda(string s);
 
-int main()
+int main(int argc, char **argvs)
 {
-    cout<<"servidor"<<endl;
+    if(argc != 2){
+        ayuda("-h");
+        return 0;
+    }
+    PORT = atoi(argvs[1]);
 
     cargarArchivo();
 
@@ -80,6 +83,7 @@ int main()
         pthread_detach(thread);
 
     }
+    return 0;
 }
 
 void cargarArchivo()
@@ -100,8 +104,8 @@ void cargarArchivo()
     	art.id = atoi(id.c_str());
     	getline(archivoArticulos,art.articulo,';');
     	getline(archivoArticulos,art.producto,';');
-    	getline(archivoArticulos,art.marca);
-        art.marca.replace(art.marca.length()-1,1,"\0");
+    	getline(archivoArticulos,art.marca,'\r');
+        // art.marca.replace(art.marca.length()-1,1,"\0");
         //cout<<"-"<<art.marca<<"-"<<endl;
         articulos.push_back(art);
     }
@@ -234,4 +238,10 @@ void* Servidor(void* arg)
     close(sockEntrada);
 
     pthread_exit((void*) 0);
+}
+void ayuda(string s)
+{
+    if(s == "-h" || s == "-help" || s == "-?")
+        cout<<"Debe ingresar el PUERTO que escuchara el servidor."<<endl
+            <<"Ejemplo: ./servidor 5000"<<endl;
 }
