@@ -13,6 +13,9 @@
 #include <algorithm>
 #include <csignal>
 
+#include <limits.h>
+#include <stdlib.h>
+
 using namespace std;
 
 struct articulo{
@@ -28,9 +31,9 @@ sem_t *semEsperandoRtaMutex;
 sem_t *semHayRespuesta;
 sem_t *semHayConsulta;
 int SIZE = 4096000;
-string NOMBRE = "mem";
+string NOMBRE_MEMORIA = "mem";
 
-void cargarArchivo();
+void cargarArchivo(string path);
 sem_t* crearSemaforo(const char* nombre, int valor);
 void handler(int);
 static void createDaemonProcess();
@@ -38,20 +41,22 @@ void ayuda();
 
 int main(int argc, char* argv[]) 
 { 
-    if(argc > 1 || argv[1] == "-h" || argv[1] == "-help" || argv[1] == "-?"){
+    if(argc != 2 || strcmp(argv[1],"-h") == 0 || strcmp(argv[1],"-help") == 0 || strcmp(argv[1],"-?") == 0){
         ayuda();
         return 0;
     }
+
     createDaemonProcess();
 
-    signal(SIGINT, handler);
+    signal(SIGTERM, handler);
+    char path[100];
+    realpath(argv[1],path);
+    cargarArchivo(path);
 
     semUsoMemoriaMutex = crearSemaforo("/usomemoria",1);
     semEsperandoRtaMutex = crearSemaforo("/esperandorespuesta",1);
     semHayRespuesta = crearSemaforo("/hayrespuesta",0);
     semHayConsulta = crearSemaforo("/hayconsulta",0);
-
-    cargarArchivo();
 
     /* shared memory file descriptor */
     int shm_fd; 
@@ -60,14 +65,14 @@ int main(int argc, char* argv[])
     void* ptr; 
   
     /* create the shared memory object */
-    shm_fd = shm_open(NOMBRE.c_str(), O_CREAT | O_RDWR, 0666); 
+    shm_fd = shm_open(NOMBRE_MEMORIA.c_str(), O_CREAT | O_RDWR, 0666); 
   
     /* configure the size of the shared memory object */
     ftruncate(shm_fd, SIZE); 
   
     /* memory map the shared memory object */
     ptr = mmap(NULL, SIZE, PROT_WRITE | PROT_READ, MAP_SHARED, shm_fd, 0); 
-    
+
     while(1){
 
 	    sem_wait(semHayConsulta);
@@ -97,64 +102,63 @@ int main(int argc, char* argv[])
 
         sem_post(semUsoMemoriaMutex);
         // proceso consulta
+        int cant = 0;
         list<articulo>::iterator it;
+        respuestaStream << "Los articulos con " << campo << " igual a " << valor << " son:" << endl
+                            << "ID\t\tARTICULO\t\tPRODUCTO\tMARCA"<<endl;
         for (it = articulos.begin(); it != articulos.end(); it++)
         {
             if(pedido.id == it->id ||
                 pedido.articulo == it->articulo ||
                 pedido.producto == it->producto ||
                 pedido.marca == it->marca){
+                    cant++;
                     respuestaStream << it->id << " \t " << it->articulo << " \t " << it->producto << "\t" << it->marca <<endl;
                 }
         }
         sem_wait(semUsoMemoriaMutex);
         // escribo respuesta
-        sprintf((char *)ptr, "%s", respuestaStream.str().c_str());
+        if(cant > 0)
+            sprintf((char *)ptr, "%s", respuestaStream.str().c_str());
+        else
+            sprintf((char *)ptr, "%s", "No hay ningun articulo que coincida con la busqueda.\n");
         sem_post(semUsoMemoriaMutex);
         sem_post(semHayRespuesta);
     }
-    
-    /*
-    stringstream respuestaStream;
-    // respuestaStream << a.id << " \t " << a.marca << " \t " << a.producto << "\t" << a.articulo <<endl;
-    list<articulo>::iterator it;
-    for (it = articulos.begin(); it != articulos.end(); it++)
-    {
-        respuestaStream << it->id << " \t " << it->marca << " \t " << it->producto << "\t" << it->articulo <<endl;
-    }
-    // sprintf((char *)ptr, "%s", message_0); 
-    sprintf((char *)ptr, "%s", respuestaStream.str().c_str());
-    */
+
     return 0;
 }
 
-void cargarArchivo()
+void cargarArchivo(string path)
 {
     ifstream archivoArticulos;
-    archivoArticulos.open("articulos.txt");
+    // archivoArticulos.open("articulos.txt");
+    archivoArticulos.open(path);
     if (archivoArticulos.fail()) {
         cerr << "Error al abrir el archivo" << endl;
         archivoArticulos.close();
         exit(1);
     }
-    
+    int i = 0;
     while (!archivoArticulos.eof())
     {
-    	articulo art;
+        articulo art;
         string id;
-    	getline(archivoArticulos,id,';');
-    	art.id = atoi(id.c_str());
-    	getline(archivoArticulos,art.articulo,';');
-    	getline(archivoArticulos,art.producto,';');
-    	getline(archivoArticulos,art.marca,'\r');
-        articulos.push_back(art);
+        getline(archivoArticulos,id,';');
+        art.id = atoi(id.c_str());
+        getline(archivoArticulos,art.articulo,';');
+        getline(archivoArticulos,art.producto,';');
+        getline(archivoArticulos,art.marca,'\r');
+        if(i > 0 && art.id > 0 && art.articulo != "" && art.producto != "" && art.marca != "")
+            articulos.push_back(art);
+        i++;
     }
     archivoArticulos.close();
-    //cout << articulos.size() << endl;
+    // cout << articulos.size() << endl;
 }
 sem_t* crearSemaforo(const char* nombre, int valor)
 {
-    return sem_open(nombre, O_CREAT, S_IRUSR | S_IWUSR, valor);
+    return sem_open(nombre, O_CREAT | O_EXCL, S_IRWXU | S_IRWXG | S_IRWXO, valor);
 }
 void handler(int sig)
 {
@@ -166,15 +170,16 @@ void handler(int sig)
     sem_unlink("/hayrespuesta");
     sem_close(semUsoMemoriaMutex);
     sem_unlink("/usomemoria");
-	shm_unlink(NOMBRE.c_str());
+	shm_unlink(NOMBRE_MEMORIA.c_str());
+    cout<<"asd"<<endl;
 }
 static void createDaemonProcess()
 {
     pid_t pid, sid;
-    printf("parent pid: %d\n", getpid());
+    // printf("parent pid: %d\n", getpid());
     pid = fork(); // fork a new child process
     if(pid != 0)
-        printf("fork pid proceso demonio: %d\n", pid);
+        cout<<"Pid proceso demonio: "<<pid<<endl;
     if (pid < 0)
     {
         printf("fork failed!\n");
@@ -197,6 +202,8 @@ static void createDaemonProcess()
 }
 void ayuda()
 {
-    cout<<"Este proceso crea el demonio y devuelve su pid."<<endl
-        <<"Para finalizarlo ejecute: kill -2 pid"<<endl<<endl;
+    cout<<"Este proceso recibe por parametro el path del archivo de articulos"<<endl
+        <<"Ejemplo: ./servidor ./articulos.txt"<<endl
+        <<"Crea el demonio y devuelve su pid."<<endl
+        <<"Para finalizarlo ejecute: kill -15 pid"<<endl<<endl;
 }

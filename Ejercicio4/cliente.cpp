@@ -14,32 +14,26 @@ sem_t *semUsoMemoriaMutex;
 sem_t *semEsperandoRtaMutex;
 sem_t *semHayRespuesta;
 sem_t *semHayConsulta;
+int SIZE = 4096000;
+string NOMBRE_MEMORIA = "mem";
 
 sem_t* abrirSemaforo(const char* nombre);
-void ayuda(string s);
+void ayuda();
 
 int main(int argc, char* argv[]) 
 { 
-    abrirSemaforo("/usomemoria");
-    abrirSemaforo("/esperandorespuesta");
-    abrirSemaforo("/hayrespuesta");
-    abrirSemaforo("/hayconsulta");
+    semUsoMemoriaMutex = abrirSemaforo("/usomemoria");
+    semEsperandoRtaMutex = abrirSemaforo("/esperandorespuesta");
+    semHayRespuesta = abrirSemaforo("/hayrespuesta");
+    semHayConsulta = abrirSemaforo("/hayconsulta");
 
     if(argc != 3){
-        ayuda("-h");
+        ayuda();
         return 0;
     }
     
     stringstream consultaStream;
     consultaStream<<argv[1]<<" "<<argv[2];
-    cout<<consultaStream.str()<<endl;
-    // return 0;
-
-    /* the size (in bytes) of shared memory object */
-    const int SIZE = 4096000;
-  
-    /* name of the shared memory object */
-    const char* name = "mem"; 
   
     /* shared memory file descriptor */
     int shm_fd; 
@@ -48,12 +42,11 @@ int main(int argc, char* argv[])
     void* ptr; 
   
     /* open the shared memory object */
-    shm_fd = shm_open(name, O_RDWR, 0666); 
+    shm_fd = shm_open(NOMBRE_MEMORIA.c_str(), O_RDWR, 0666); 
   
     ftruncate(shm_fd, SIZE);
     /* memory map the shared memory object */
     ptr = mmap(NULL, SIZE, PROT_WRITE | PROT_READ, MAP_SHARED, shm_fd, 0); 
-    
     sem_wait(semEsperandoRtaMutex);
     sem_wait(semUsoMemoriaMutex);
     // escribo consulta
@@ -66,9 +59,7 @@ int main(int argc, char* argv[])
     printf("%s", (char*)ptr);
     sem_post(semUsoMemoriaMutex);
     sem_post(semEsperandoRtaMutex);
-    
-    /* remove the shared memory object */
-    shm_unlink(name); 
+
     return 0; 
 }
 
@@ -76,12 +67,11 @@ sem_t* abrirSemaforo(const char* nombre)
 {
     return sem_open(nombre,0);
 }
-void ayuda(string s)
+void ayuda()
 {
-    if(s == "-h" || s == "-help" || s == "-?")
-        cout<<"Debe la consulta en el formato CAMPO VALOR."<<endl
-            <<"Ejemplo: ./cliente id 16008"<<endl
-            <<"Ejemplo: ./cliente articulo PALMITO MAROLIO RODAJA 800 gr"<<endl
-            <<"Ejemplo: ./cliente producto cafe"<<endl
-            <<"Ejemplo: ./cliente marca natura"<<endl<<endl;
+    cout<<"Debe la consulta en el formato CAMPO VALOR."<<endl
+        <<"Ejemplo: ./cliente id 16008"<<endl
+        <<"Ejemplo: ./cliente articulo \"PALMITO MAROLIO RODAJA 800 gr\""<<endl
+        <<"Ejemplo: ./cliente producto cafe"<<endl
+        <<"Ejemplo: ./cliente marca natura"<<endl<<endl;
 }

@@ -1,4 +1,4 @@
-all: servidor cliente
+all: clean servidor cliente
 
 servidor:
 	g++ -o servidor ./servidor.cpp -lrt -lpthread
