@@ -25,11 +25,16 @@ struct articulo{
     string marca;
 };
 list<articulo> articulos{};
+string fifoConsulta;
+string fifoRespuesta;
+int fdConsulta;
+int fdRespuesta;
 
 static void createDaemonProcess();
 void ayuda();
 void procesar(int fdConsulta, int fdRespuesta);
 void cargarArchivo(string path);
+void handler(int);
 
 int main(int argc, char* argv[])
 {
@@ -37,33 +42,28 @@ int main(int argc, char* argv[])
         ayuda();
         return 0;
     }
-    // createDaemonProcess();
+    createDaemonProcess();
+
+    signal(SIGTERM, handler);
+
     char path[100];
 
     realpath(argv[1],path);
     cargarArchivo(path);
 
     realpath(argv[2],path);
-    string fifoConsulta = path;
-    cout<<fifoConsulta<<endl;
+    fifoConsulta = path;
     unlink(fifoConsulta.c_str());
     mkfifo(fifoConsulta.c_str(),0666);
-    int fdConsulta = open(fifoConsulta.c_str(),O_RDWR);
-    // cout<<fdConsulta<<endl;
+    fdConsulta = open(fifoConsulta.c_str(),O_RDWR);
     
     realpath(argv[3],path);
-    string fifoRespuesta = path;
-    cout<<fifoRespuesta<<endl;
+    fifoRespuesta = path;
     unlink(fifoRespuesta.c_str());
     mkfifo(fifoRespuesta.c_str(),0666);
-    int fdRespuesta = open(fifoRespuesta.c_str(),O_RDWR);
-    // cout<<fdConsulta<<endl;
-
+    fdRespuesta = open(fifoRespuesta.c_str(),O_RDWR);
+    
     procesar(fdConsulta, fdRespuesta);
-
-    // close(fdConsulta);
-    // close(fdRespuesta);
-    // unlink(fifo);
 }
 
 
@@ -96,31 +96,26 @@ static void createDaemonProcess()
 }
 void ayuda()
 {
-    cout<<"Este proceso recibe por parametro el path del archivo de articulos"<<endl
-        <<"Ejemplo: ./servidor ./articulos.txt"<<endl
+    cout<<"Este proceso recibe por parametro el path del archivo de articulos, el path del fifo del que lee las consultas y el path del fifo donde escribira las respuestas"<<endl
+        <<"Ejemplo: ./ejercicio3 ./articulos.txt ./fifoConsulta ./fifoRespuesta"<<endl
         <<"Crea el demonio y devuelve su pid."<<endl
         <<"Para finalizarlo ejecute: kill -15 pid"<<endl<<endl;
 }
 void procesar(int fdConsulta, int fdRespuesta)
 {
-    cout<<"procesar"<<endl;
     char str[100];
     while(1){
-        read(fdConsulta,str,100);
-        cout<<"-"<<str<<"-"<<endl;
-
         // leo consulta   
-        string consulta = string(str);
-        cout<<consulta.length()<<endl;
+        int n = read(fdConsulta,str,100);
+        string consulta = string(str).substr(0,n-1);
         for_each(consulta.begin(),consulta.end(),[](char &c){
             c = ::toupper(c);
         });
-        cout<<consulta<<endl;
         articulo pedido = {};
         string campo,valor;
     	stringstream ss(consulta),respuestaStream;
-        getline(ss,campo,' ');
-        getline(ss,valor,'\n');
+        getline(ss,campo,'=');
+        getline(ss,valor);
         if(campo == "ID"){
             pedido.id = atoi(valor.c_str());
         }
@@ -133,7 +128,7 @@ void procesar(int fdConsulta, int fdRespuesta)
         else if(campo == "MARCA"){
             pedido.marca = valor;
         } 
-
+        
         // proceso consulta
         int cant = 0;
         list<articulo>::iterator it;
@@ -150,11 +145,6 @@ void procesar(int fdConsulta, int fdRespuesta)
                 }
         }
 
-        // escribo respuesta
-        // if(cant > 0)
-        //     sprintf((char *)ptr, "%s", respuestaStream.str().c_str());
-        // else
-        //     sprintf((char *)ptr, "%s", "No hay ningun articulo que coincida con la busqueda.\n");
         string respuesta;
         if(cant > 0)
             respuesta = respuestaStream.str().c_str();
@@ -169,7 +159,6 @@ void procesar(int fdConsulta, int fdRespuesta)
 void cargarArchivo(string path)
 {
     ifstream archivoArticulos;
-    // archivoArticulos.open("articulos.txt");
     archivoArticulos.open(path);
     if (archivoArticulos.fail()) {
         cerr << "Error al abrir el archivo" << endl;
@@ -184,12 +173,28 @@ void cargarArchivo(string path)
         getline(archivoArticulos,id,';');
         art.id = atoi(id.c_str());
         getline(archivoArticulos,art.articulo,';');
+        for_each(art.articulo.begin(),art.articulo.end(),[](char &c){
+            c = ::toupper(c);
+        });
         getline(archivoArticulos,art.producto,';');
+        for_each(art.producto.begin(),art.producto.end(),[](char &c){
+            c = ::toupper(c);
+        });
         getline(archivoArticulos,art.marca,'\r');
+        for_each(art.marca.begin(),art.marca.end(),[](char &c){
+            c = ::toupper(c);
+        });
         if(i > 0 && art.id > 0 && art.articulo != "" && art.producto != "" && art.marca != "")
             articulos.push_back(art);
         i++;
     }
     archivoArticulos.close();
-    cout << articulos.size() << endl;
+    // cout << articulos.size() << endl;
+}
+void handler(int)
+{
+    close(fdConsulta);
+    unlink(fifoConsulta.c_str());
+    close(fdRespuesta);
+    unlink(fifoRespuesta.c_str());
 }
