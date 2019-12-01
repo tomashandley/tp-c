@@ -17,6 +17,7 @@
 #include <sys/ioctl.h>
 #include <string.h>
 #include <algorithm>
+#include <csignal>
 
 using namespace std;
 
@@ -32,30 +33,35 @@ struct articulo{
 list<articulo> articulos{};
 int CONECTADOS = 0;
 int PORT;
+int sockEntrada;
 
-void cargarArchivo();
+void cargarArchivo(string path);
 int configuracionServidor();
 void* Servidor(void* arg);
-void ayuda(string s);
+void ayuda();
 static void createDaemonProcess();
+void handler(int);
 
 int main(int argc, char **argvs)
 {
-    if(argc != 2){
-        ayuda("-h");
+    if(argc != 3){
+        ayuda();
         return 0;
     }
     createDaemonProcess();
-    PORT = atoi(argvs[1]);
 
-    cargarArchivo();
+    signal(SIGTERM, handler);
+    PORT = atoi(argvs[1]);
+    char path[100];
+    realpath(argvs[2],path);
+
+    cargarArchivo(path);
 
     int sockfd = configuracionServidor();
 
 	//printf("Esperando clientes\n");
 	while (1)
 	{
-
         int clienteSockfd;
         struct sockaddr_in clienteAddr;
     /*tamaño de la estrutura*/	
@@ -63,7 +69,6 @@ int main(int argc, char **argvs)
         clntLen = sizeof (clienteAddr);
     /*declara un thread*/
         pthread_t thread;
-
 
         if ((clienteSockfd = accept(sockfd, (struct sockaddr *) & clienteAddr, &clntLen)) < 0)
         {
@@ -86,28 +91,40 @@ int main(int argc, char **argvs)
     return 0;
 }
 
-void cargarArchivo()
+void cargarArchivo(string path)
 {
     ifstream archivoArticulos;
-    archivoArticulos.open("articulos.txt");
+    archivoArticulos.open(path);
     if (archivoArticulos.fail()) {
-        //cerr << "Error al abrir el archivo" << endl;
+        cerr << "Error al abrir el archivo" << endl;
         archivoArticulos.close();
         exit(1);
     }
-    
+    int i = 0;
     while (!archivoArticulos.eof())
     {
-    	articulo art;
+        articulo art;
         string id;
-    	getline(archivoArticulos,id,';');
-    	art.id = atoi(id.c_str());
-    	getline(archivoArticulos,art.articulo,';');
-    	getline(archivoArticulos,art.producto,';');
-    	getline(archivoArticulos,art.marca,'\r');
-        articulos.push_back(art);
+        getline(archivoArticulos,id,';');
+        art.id = atoi(id.c_str());
+        getline(archivoArticulos,art.articulo,';');
+        for_each(art.articulo.begin(),art.articulo.end(),[](char &c){
+            c = ::toupper(c);
+        });
+        getline(archivoArticulos,art.producto,';');
+        for_each(art.producto.begin(),art.producto.end(),[](char &c){
+            c = ::toupper(c);
+        });
+        getline(archivoArticulos,art.marca,'\r');
+        for_each(art.marca.begin(),art.marca.end(),[](char &c){
+            c = ::toupper(c);
+        });
+        if(i > 0 && art.id > 0 && art.articulo != "" && art.producto != "" && art.marca != "")
+            articulos.push_back(art);
+        i++;
     }
     archivoArticulos.close();
+    // cout << articulos.size() << endl;
 }
 int configuracionServidor()
 {
@@ -141,26 +158,26 @@ int configuracionServidor()
 }
 void* Servidor(void* arg)
 {
-    int sockEntrada = *(int *) arg;
+    sockEntrada = *(int *) arg;
     char buffer_cliente[256],cad[256];
     string consulta;
 
-    strcpy(cad,"Bienvenida/o ingrese la consulta en el formato CAMPO VALOR o QUIT para salir:");
+    strcpy(cad,"Bienvenida/o ingrese la consulta en el formato CAMPO=VALOR o QUIT para salir:");
     write(sockEntrada,cad,sizeof(cad));
 
-    //leo consulta en formato campo valor
+    //leo consulta en formato campo=valor
     read(sockEntrada, buffer_cliente, sizeof (buffer_cliente));
     consulta = buffer_cliente;
     for_each(consulta.begin(),consulta.end(),[](char &c){
         c = ::toupper(c);
     });
-    //cout<<"cliente: "<<sockEntrada<<" consulta: "<<consulta<<endl<<endl;
+    // cout<<"cliente: "<<sockEntrada<<" consulta: "<<consulta<<endl<<endl;
     
     while(consulta != "QUIT"){
         articulo pedido = {};
         string campo,valor,respuesta;
     	stringstream ss(consulta),respuestaStream;
-        getline(ss,campo,' ');
+        getline(ss,campo,'=');
         getline(ss,valor);
 
         if(campo == "ID"){
@@ -212,38 +229,37 @@ void* Servidor(void* arg)
             }
         }
 
-        strcpy(cad,"Ingrese la consulta en el formato CAMPO VALOR o QUIT para salir:");
+        strcpy(cad,"Ingrese la consulta en el formato CAMPO=VALOR o QUIT para salir:");
         write(sockEntrada,cad,sizeof(cad));
 
-        //leo consulta en formato campo valor
+        //leo consulta en formato campo=valor
         read(sockEntrada, buffer_cliente, sizeof (buffer_cliente));
         consulta = buffer_cliente;
         for_each(consulta.begin(),consulta.end(),[](char &c){
             c = ::toupper(c);
         });
-        //cout<<"cliente: "<<sockEntrada<<" consulta: "<<consulta<<endl<<endl;
+        // cout<<"cliente: "<<sockEntrada<<" consulta: "<<consulta<<endl<<endl;
     }
     
     CONECTADOS--;
     //cout<<endl<<"SE HA DESCONECTADO UN CLIENTE, HAY "<<CONECTADOS<<" CONECTADOS"<<endl;
 
-    close(sockEntrada);
+    // close(sockEntrada);
 
     pthread_exit((void*) 0);
 }
-void ayuda(string s)
+void ayuda()
 {
-    if(s == "-h" || s == "-help" || s == "-?")
-        cout<<"Debe ingresar el PUERTO que escuchara el servidor."<<endl
-            <<"Ejemplo: ./servidor 5000"<<endl;
+    cout<<"Debe ingresar el PUERTO que escuchara el servidor y el PATH del archivo de articulos."<<endl
+        <<"Ejemplo: ./servidor 5000 ./articulos.txt"<<endl;
 }
 static void createDaemonProcess()
 {
     pid_t pid, sid;
-    printf("parent pid: %d\n", getpid());
+    // printf("parent pid: %d\n", getpid());
     pid = fork(); // fork a new child process
     if(pid != 0)
-        printf("fork pid proceso demonio: %d\n", pid);
+        cout<<"Pid proceso demonio: "<<pid<<endl;
     if (pid < 0)
     {
         printf("fork failed!\n");
@@ -254,7 +270,6 @@ static void createDaemonProcess()
         exit(0); //terminate the parent process succesfully
     }
     
-
     umask(0);       //unmasking the file mode
     sid = setsid(); //set new session
     if (sid < 0)
@@ -263,4 +278,10 @@ static void createDaemonProcess()
     }
     //close(STDIN_FILENO);
     //close(STDERR_FILENO);
+}
+void handler(int)
+{
+    close(sockEntrada);
+
+    pthread_exit((void*) 0);
 }

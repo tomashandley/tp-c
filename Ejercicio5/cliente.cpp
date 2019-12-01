@@ -19,13 +19,13 @@ int PORT;
 
 int configuracionCliente(char *servidor);
 void Cliente(int clienteSockfd);
-void ayuda(string s);
+void ayuda();
 
 int main(int argc, char **argvs)
 {
     system("clear");
     if(argc != 3){
-        ayuda("-h");
+        ayuda();
         return 0;
     }
 
@@ -112,14 +112,13 @@ void Cliente(int clienteSockfd)
     }
     close(clienteSockfd);
 }
-void ayuda(string s)
+void ayuda()
 {
-    if(s == "-h" || s == "-help" || s == "-?")
-        cout<<"Debe ingresar la IP y el PUERTO del servidor al que se desea conectar."<<endl
-            <<"Ejemplo: ./cliente 127.0.0.1 5000"<<endl<<endl
-            <<"Una vez conectado al servidor, este le pedira que ingrese la consulta en el formato CAMPO VALOR."<<endl
-            <<"Ejemplo: id 16008"<<endl
-            <<"Ejemplo: articulo PALMITO MAROLIO RODAJA 800 gr"<<endl
-            <<"Ejemplo: producto cafe"<<endl
-            <<"Ejemplo: marca natura"<<endl<<endl;
+    cout<<"Debe ingresar la IP y el PUERTO del servidor al que se desea conectar."<<endl
+        <<"Ejemplo: ./cliente 127.0.0.1 5000"<<endl<<endl
+        <<"Una vez conectado al servidor, este le pedira que ingrese la consulta en el formato CAMPO=VALOR."<<endl
+        <<"Ejemplo: id=16008"<<endl
+        <<"Ejemplo: articulo=PALMITO MAROLIO RODAJA 800 gr"<<endl
+        <<"Ejemplo: producto=cafe"<<endl
+        <<"Ejemplo: marca=la banda"<<endl<<endl;
 }
