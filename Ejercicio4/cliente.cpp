@@ -27,13 +27,13 @@ int main(int argc, char* argv[])
     semHayRespuesta = abrirSemaforo("/hayrespuesta");
     semHayConsulta = abrirSemaforo("/hayconsulta");
 
-    if(argc != 3){
+    if(argc != 2){
         ayuda();
         return 0;
     }
     
     stringstream consultaStream;
-    consultaStream<<argv[1]<<" "<<argv[2];
+    consultaStream<<argv[1];
   
     /* shared memory file descriptor */
     int shm_fd; 
@@ -69,9 +69,9 @@ sem_t* abrirSemaforo(const char* nombre)
 }
 void ayuda()
 {
-    cout<<"Debe la consulta en el formato CAMPO VALOR."<<endl
-        <<"Ejemplo: ./cliente id 16008"<<endl
-        <<"Ejemplo: ./cliente articulo \"PALMITO MAROLIO RODAJA 800 gr\""<<endl
-        <<"Ejemplo: ./cliente producto cafe"<<endl
-        <<"Ejemplo: ./cliente marca natura"<<endl<<endl;
+    cout<<"Debe la consulta en el formato CAMPO=VALOR."<<endl
+        <<"Ejemplo: ./cliente id=16008"<<endl
+        <<"Ejemplo: ./cliente articulo=\"PALMITO MAROLIO RODAJA 800 gr\""<<endl
+        <<"Ejemplo: ./cliente producto=cafe"<<endl
+        <<"Ejemplo: ./cliente marca=natura"<<endl<<endl;
 }

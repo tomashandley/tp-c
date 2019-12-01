@@ -85,7 +85,7 @@ int main(int argc, char* argv[])
         articulo pedido = {};
         string campo,valor,respuesta;
     	stringstream ss(consulta),respuestaStream;
-        getline(ss,campo,' ');
+        getline(ss,campo,'=');
         getline(ss,valor);
         if(campo == "ID"){
             pedido.id = atoi(valor.c_str());
@@ -132,7 +132,6 @@ int main(int argc, char* argv[])
 void cargarArchivo(string path)
 {
     ifstream archivoArticulos;
-    // archivoArticulos.open("articulos.txt");
     archivoArticulos.open(path);
     if (archivoArticulos.fail()) {
         cerr << "Error al abrir el archivo" << endl;
@@ -147,8 +146,17 @@ void cargarArchivo(string path)
         getline(archivoArticulos,id,';');
         art.id = atoi(id.c_str());
         getline(archivoArticulos,art.articulo,';');
+        for_each(art.articulo.begin(),art.articulo.end(),[](char &c){
+            c = ::toupper(c);
+        });
         getline(archivoArticulos,art.producto,';');
+        for_each(art.producto.begin(),art.producto.end(),[](char &c){
+            c = ::toupper(c);
+        });
         getline(archivoArticulos,art.marca,'\r');
+        for_each(art.marca.begin(),art.marca.end(),[](char &c){
+            c = ::toupper(c);
+        });
         if(i > 0 && art.id > 0 && art.articulo != "" && art.producto != "" && art.marca != "")
             articulos.push_back(art);
         i++;
@@ -171,7 +179,6 @@ void handler(int sig)
     sem_close(semUsoMemoriaMutex);
     sem_unlink("/usomemoria");
 	shm_unlink(NOMBRE_MEMORIA.c_str());
-    cout<<"asd"<<endl;
 }
 static void createDaemonProcess()
 {
