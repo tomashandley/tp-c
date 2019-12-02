@@ -9,3 +9,13 @@
 	<sys/resource.h>
 	<sys/time.h>
 
+1575248488 source:/home/thandley/Downloads/tp-c/Ejercicio1/main.c
+	<stdio.h>
+	<stdlib.h>
+	<signal.h>
+	<unistd.h>
+	<stdlib.h>
+	<sys/wait.h>
+	<sys/resource.h>
+	<sys/time.h>
+
