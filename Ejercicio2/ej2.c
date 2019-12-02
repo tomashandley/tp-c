@@ -12,14 +12,17 @@ double resy = 0;
 int total_elementos = 0,cant_elementos_thread = 0, cant_threads = 0;
 int posvec = 0;
 
+void ayuda();
+
 void *threadIni(void *vargp){
  	int *myid = (int *)vargp;
  	int cant_elementos_operar = cant_elementos_thread;
  	pthread_mutex_lock(&lock);
-	printf("Thread ID: %d\n", *myid);
+	// printf("Thread ID: %d\n", *myid);
 	while(cant_elementos_operar > 0 && total_elementos > 0){
 
-        if(((vec + posvec) % 2) == 0) {
+        // if(((int)(*vec + posvec) % 2) == 0) {
+		if((posvec % 2) == 0) {
             resx += *(vec + posvec);
         } else {
             resy += *(vec + posvec);
@@ -34,6 +37,11 @@ void *threadIni(void *vargp){
 
 
 int main(int argc, char const *argv[]){
+	if(argc != 3 || strcmp(argv[1],"-h") || strcmp(argv[1],"-help") || strcmp(argv[1],"-?")){
+		ayuda();
+		return 1;
+	}
+	
 	vec = (double*) malloc(32);
 	char *first=malloc(16);
 	char *second = malloc(16);
@@ -67,7 +75,7 @@ int main(int argc, char const *argv[]){
        timeout for instance */
 
     cant_elementos_thread = (int)total_elementos / cant_threads + (total_elementos % cant_threads != 0);
-    printf("%d\n", cant_elementos_thread);
+    printf("Cada thread va a operar: %d elementos\n", cant_elementos_thread);
     fclose(file);
 
     pthread_t tid;
@@ -84,11 +92,18 @@ int main(int argc, char const *argv[]){
     while(total_elementos > 0){
     }
 
-    printf("total : %lf\n",sum);
+    // printf("total : %lf\n",sum);
 
     FILE* fout = fopen("salida","w");
-    fprintf(fout, "Cantidad operaciones thread : %d\n",cant_elementos_thread);
+    // fprintf(fout, "Cantidad operaciones thread : %d\n",cant_elementos_thread);
     fprintf(fout, "Suma : %lf , %lf\n",resx, resy);
     fclose(fout);
     return 1;
+}
+void ayuda()
+{
+	printf("Este proceso recibe dos parametros. El primero es el path del archivo de entrada (.txt).\n");
+	printf("Y el segundo la cantidad de hilos en la que se dividira la carga de trabajo.\n");
+	printf("Ejemplo: ./ej2 ./archivo_datos 4\n");
+	printf("Realiza la suma vectorial de los pares ordenados que se encuentran en el .txt\n");
 }
