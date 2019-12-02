@@ -58,19 +58,21 @@ int main() /// PADRE
             pid_t nieto2 = fork(); /// Segundo nieto
             if(nieto2 == 0) { /// Descendencia Segundo Nieto
                 pid_t bisnieto3 = fork(); /// Tercer bisnieto
-                if(bisnieto3 != 0) {
-                    printf ("PID:%d PPID:%d Parentezco-Tipo: Bisnieto 3 - Normal\n",bisnieto3,getpid());
-                    pid_t bisnieto4 = fork();
-                    if(bisnieto4 != 0) {
-                        printf ("PID:%d PPID:%d Parentezco-Tipo: Bisnieto 4 - Normal\n",bisnieto4,getpid());
-                    } else {
-                        stay();
-                    }
+                if(bisnieto3 == 0) {
+                    contar();
                 } else {
-                    stay();
+                    printf ("PID:%d PPID:%d Parentezco-Tipo: Bisnieto 3 - Demonio\n",bisnieto3,getpid());
+                    pid_t bisnieto4 = fork();
+                    if(bisnieto4 == 0) {
+                        contar();
+                    } else {
+                        printf ("PID:%d PPID:%d Parentezco-Tipo: Bisnieto 4 - Demonio\n",bisnieto4,getpid());
+                    }
+                    return 0;
                 }
+                return 0;
             } else {
-                printf ("PID:%d PPID:%d Parentezco-Tipo: Nieto 2 - Normal\n",nieto2,getpid());
+                printf ("PID:%d PPID:%d Parentezco-Tipo: Nieto 2 - Zombie\n",nieto2,getpid());
             }
             stay();
         }
@@ -86,11 +88,11 @@ int main() /// PADRE
                     contar();
 //                    stay();
                 } else {
-                    printf ("PID:%d PPID:%d Parentezco-Tipo: Bisnieto 5 - Normal\n",bisnieto5,getpid());
-                    return 0;
+                    printf ("PID:%d PPID:%d Parentezco-Tipo: Bisnieto 5 - Demonio\n",bisnieto5,getpid());
                 }
+                return 0;
             } else {
-                printf ("PID:%d PPID:%d Parentezco-Tipo: Nieto 3 - Normal\n",nieto3,getpid());
+                printf ("PID:%d PPID:%d Parentezco-Tipo: Nieto 3 - Zombie\n",nieto3,getpid());
                 stay();
             }
         } else {
