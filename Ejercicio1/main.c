@@ -6,6 +6,9 @@
 #include <sys/wait.h>
 #include <sys/resource.h>
 #include <sys/time.h>
+#include <string.h>
+
+void ayuda();
 
 int stay() {
     while(1 == 1) {
@@ -27,8 +30,12 @@ int contar()
     return 0;
 }
 
-int main() /// PADRE
-{
+int main(int argc, char const *argv[]){ /// PADRE
+	if(argc != 1 || strcmp(argv[1],"-h") || strcmp(argv[1],"-help") || strcmp(argv[1],"-?")){
+		ayuda();
+		return 1;
+	}
+
     pid_t hijo1;
     pid_t hijo2;
 
@@ -102,4 +109,12 @@ int main() /// PADRE
     }
     stay();
     return 0;
+}
+
+void ayuda()
+{
+    printf("Este proceso no recibe parametros\n");
+    printf("Ejemplo: ./ejercicio1\n");
+    printf("Crea 2 procesos hijos, 3 nietos y 5 bisnietos. De estos ultimos 3 son deminios y 2 zombies.\n");
+    printf("Para finalizarlo ejecute ctrl+c\n");
 }
