@@ -31,9 +31,11 @@ int contar()
 }
 
 int main(int argc, char const *argv[]){ /// PADRE
-	if(argc != 1 || strcmp(argv[1],"-h") || strcmp(argv[1],"-help") || strcmp(argv[1],"-?")){
-		ayuda();
-		return 1;
+	if(argc != 1){
+        if(strcmp(argv[1],"-h") || strcmp(argv[1],"-help") || strcmp(argv[1],"-?")){
+            ayuda();
+            return 1;
+        }
 	}
 
     pid_t hijo1;
