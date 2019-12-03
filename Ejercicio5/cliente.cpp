@@ -12,6 +12,7 @@
 #include <iostream>
 #include <string>
 #include <algorithm>
+#include <string.h>
 
 using namespace std;
 
@@ -24,7 +25,7 @@ void ayuda();
 int main(int argc, char **argvs)
 {
     system("clear");
-    if(argc != 3){
+    if(argc != 3 || strcmp(argvs[1],"-h") == 0 || strcmp(argvs[1],"-help") == 0 || strcmp(argvs[1],"-?") == 0){
         ayuda();
         return 0;
     }

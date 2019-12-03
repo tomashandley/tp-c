@@ -27,7 +27,7 @@ int main(int argc, char* argv[])
     semHayRespuesta = abrirSemaforo("/hayrespuesta");
     semHayConsulta = abrirSemaforo("/hayconsulta");
 
-    if(argc != 2){
+    if(argc < 2 || argc > 2  || strcmp(argv[1],"-h") == 0 || strcmp(argv[1],"-help") == 0 || strcmp(argv[1],"-?") == 0){
         ayuda();
         return 0;
     }
