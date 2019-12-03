@@ -1,11 +1,14 @@
 #include <stdio.h>
 #include <pthread.h>
-
+#include <string.h>
 #include <list>
 #include <fstream>
 #include <iostream>
 #include <sstream>
-#include <string>
+#include <string>       
+#include <limits.h>
+#include <stdlib.h>
+#include <cctype>
 using namespace std;
 
 #define MAX_THREADS 50
@@ -27,6 +30,8 @@ list<vectoresPorHilo> hilos;
 
 pthread_t tabla_thr[MAX_THREADS];
 
+void ayuda();
+
 void* imprime_mensaje(void *ptr) {
     int i;
     int id;
@@ -35,7 +40,7 @@ void* imprime_mensaje(void *ptr) {
     list<vectoresPorHilo>::iterator it = hilos.begin();
 
     id = *(int *) ptr;
-    cout<<id<<" "<<hilos.size()<<endl;
+    // cout<<id<<" "<<hilos.size()<<endl;
     if(id < hilos.size()){
         advance(it,id);
         vectoresPorHilo vph = *it;
@@ -59,14 +64,22 @@ void* imprime_mensaje(void *ptr) {
 
 int main(int argc, char *argv[])
 {
+    if(argc != 3 || strcmp(argv[1],"-h") == 0 || strcmp(argv[1],"-help") == 0 || strcmp(argv[1],"-?") == 0){
+        ayuda();
+        return 0;
+    }
+
+    int cant_threads = atoi(argv[2]);
+
     pthread_t hilo0, hilo1,hilo2;
     int id0=0, id1=1, id2=2;
-    int cant_threads = atoi(argv[1]);
 
     pthread_t threads[cant_threads];
     int cant=0, cantVectores = 0;
     ifstream archivo;
-    archivo.open("archivo_datos");
+    char path[100];
+    realpath(argv[1],path);
+    archivo.open(path);
     if (archivo.fail()) {
         cerr << "Error al abrir el archivo" << endl;
         archivo.close();
@@ -126,7 +139,6 @@ int main(int argc, char *argv[])
         cantVectores++;
     }
     hilos.begin();
-    cout<<"hilos.size()"<<hilos.size()<<endl;
     // cout<<"cant vectores "<<vectores.size()<<endl;
     // list<vectoresPorHilo>::iterator itHilos;
     // for (itHilos = hilos.begin(); itHilos != hilos.end(); itHilos++)
@@ -149,4 +161,12 @@ int main(int argc, char *argv[])
         salida<<resultados[i]<<endl;
     }
     return 0;
+}
+void ayuda()
+{
+    cout<<"Este proceso recibe dos parametros. El primero es el path del archivo de entrada (.txt)."<<endl;
+	cout<<"Y el segundo la cantidad de hilos en la que se dividira la carga de trabajo."<<endl;
+	cout<<"Ejemplo: ./ej2 ./archivo_datos 4"<<endl;
+	cout<<"Realiza la suma vectorial de los pares ordenados que se encuentran en el .txt"<<endl;
+    cout<<"E imprime el resultado en un archivo con el nombre salida en el path del proceso."<<endl;
 }

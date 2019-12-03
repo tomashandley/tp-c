@@ -1,7 +1,7 @@
 all: clean ejercicio2
 
 ejercicio2:
-	gcc -o ej2 ej2.c -lpthread
+	g++ -o ejercicio2 2.cpp -lpthread
 
 clean:
-	rm -rf *.o ej2
+	rm -rf *.o ejercicio2
