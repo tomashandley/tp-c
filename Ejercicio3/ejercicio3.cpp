@@ -98,6 +98,8 @@ void ayuda()
 {
     cout<<"Este proceso recibe por parametro el path del archivo de articulos, el path del fifo del que lee las consultas y el path del fifo donde escribira las respuestas"<<endl
         <<"Ejemplo: ./ejercicio3 ./articulos.txt ./fifoConsulta ./fifoRespuesta"<<endl
+        <<"En la fifo de consulta escribir echo\"id=16008\">./fifoConsulta"<<endl
+        <<"Y para ver los resultados cat ./fifoRespuesta"<<endl
         <<"Crea el demonio y devuelve su pid."<<endl
         <<"Para finalizarlo ejecute: kill -15 pid"<<endl<<endl;
 }
